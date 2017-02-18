@@ -4,6 +4,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::collections::HashMap;
+use std::str::FromStr;
 
 type Error = String;
 
@@ -13,6 +14,15 @@ type Result<V> = std::result::Result<V, Error>;
 pub struct KVStore {
   content: HashMap<String, Value>
 }
+
+impl FromStr for KVStore {
+  type Err = Error;
+
+  fn from_str(s: &str) -> Result<Self> {
+    serde_json::from_str(s).map_err(|e| e.to_string())
+  }
+}
+
 
 impl KVStore {
   pub fn new() -> KVStore {
@@ -31,6 +41,17 @@ impl KVStore {
 
   fn get_mut<S: ToString>(&mut self, key: S) -> Result<&mut Value> {
     self.content.get_mut(&key.to_string()).ok_or("no key".to_string())
+  }
+
+  fn get_mut_list<S: ToString>(&mut self, key: S) -> Result<&mut Vec<String>> {
+    let key = key.to_string();
+    let kv_value = self.get_mut(&key)?;
+
+    if let &mut Value::ListValue(ref mut list) = kv_value {
+      Ok(list)
+    } else {
+      Err(format!("value at {} not a list", &key))
+    }
   }
 
   pub fn get<S: ToString>(&self, key: &S) -> Option<&Value> {
@@ -69,6 +90,12 @@ impl KVStore {
     } else {
       Err("not a list".to_string())
     }
+  }
+
+  pub fn pop_value<KS: ToString>(&mut self, key: KS) -> Result<String> {
+    let list_value = self.get_mut_list(key)?;
+
+    list_value.pop().ok_or("list is empty".to_string())
   }
 }
 
