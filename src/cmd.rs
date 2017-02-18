@@ -39,12 +39,30 @@ impl FromStr for Command {
   type Err = Error;
 
   fn from_str(s: &str) -> Result<Self> {
-    let split: Vec<&str> = s.split(' ').collect();
+    let split = s.split(' ').map(|x| x.to_string()).collect();
 
-    match split[0] {
+    Command::from_strings(split)
+  }
+}
+
+impl Command {
+  pub fn from_strings(strings: Vec<String>) -> Result<Self> {
+
+    match strings[0].as_str() {
       "init" => Ok(Command::Init),
-      "put" => assert_length(&split, 3).map(|v| Command::PutString(v[1].to_string(), v[2].to_string())),
-      _ => Err(Error::InvalidCommand(s.to_string()))
+
+      "put" => assert_length(&strings, 3).map(|v| Command::PutString(v[1].clone(), v[2].clone())),
+      "drop" => assert_length(&strings, 2).map(|v| Command::DropString(v[1].clone())),
+
+      "createEmptyList" => assert_length(&strings, 2).map(|v| Command::CreateEmptyList(v[1].clone())),
+      "pushListValue" => assert_length(&strings, 3).map(|v| Command::PushListValue(v[1].clone(), v[2].clone())),
+      "popListValue" => assert_length(&strings, 2).map(|v| Command::PopListValue(v[1].clone())),
+      "dropList" => assert_length(&strings, 2).map(|v| Command::DropList(v[1].clone())),
+      "clearList" => assert_length(&strings, 2).map(|v| Command::ClearList(v[1].clone())),
+
+      "get" => assert_length(&strings, 2).map(|v| Command::Get(v[1].clone())),
+
+      cmd => Err(Error::InvalidCommand(cmd.to_string()))
     }
   }
 }
@@ -84,10 +102,18 @@ mod tests {
     let err = Command::from_str("invalid test").err().unwrap();
 
     if let Error::InvalidCommand(cmd) = err {
-      assert_eq!(cmd, "invalid test".to_string());
+      assert_eq!(cmd, "invalid".to_string());
     } else {
       assert!(false);
     }
+  }
+
+  #[test]
+  fn test_from_vec() {
+    let strings = "put bla gna".split(' ').map(|x| x.to_string()).collect();
+    let cmd = Command::from_strings(strings).unwrap();
+
+    assert_eq!(cmd, Command::PutString("bla".to_string(), "gna".to_string()));
   }
 
 }

@@ -1,5 +1,7 @@
 extern crate kvs2;
 
+use kvs2::cmd;
+
 use std::str::FromStr;
 
 fn main() {
