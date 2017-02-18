@@ -7,3 +7,4 @@ authors = ["Alexander Weld <weldale@gmail.com>"]
 serde = "0.9.7"
 serde_derive = "0.9.7"
 serde_json = "0.9.6"
+getopts = "0.2.14"

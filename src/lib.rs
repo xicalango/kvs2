@@ -9,6 +9,14 @@ use std::str::FromStr;
 use std::io::{
   Read,
   Write,
+  BufReader,
+  BufWriter,
+};
+
+use std::path::Path;
+use std::fs::{
+  File,
+  OpenOptions,
 };
 
 use std::fmt::{
@@ -37,6 +45,22 @@ impl From<serde_json::Error> for Error {
   fn from(e: serde_json::Error) -> Self {
     KVError::UnknownError(e.to_string())
   }
+}
+
+impl From<std::io::Error> for Error {
+  fn from(e: std::io::Error) -> Self {
+    KVError::UnknownError(e.to_string())
+  }
+}
+
+pub fn init<P: AsRef<Path>>(path: P) -> Result<KVStore> {
+  let file = File::create(path)?;
+  let mut writer = BufWriter::new(file);
+
+  let kvs = KVStore::new();
+  kvs.write(&mut writer)?;
+
+  Ok(kvs)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -69,12 +93,26 @@ impl KVStore {
     Ok(serde_json::from_reader(r)?)
   }
 
+  pub fn read_from_file<P: AsRef<Path>>(path: P) -> Result<KVStore> {
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+
+    KVStore::read(reader)
+  }
+
   pub fn serialize(&self) -> Result<String> {
     Ok(serde_json::to_string(self)?)
   }
 
   pub fn write<W: Write>(&self, w: &mut W) -> Result<()> {
     Ok(serde_json::to_writer(w, self)?)
+  }
+
+  pub fn write_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+    let file = OpenOptions::new().write(true).truncate(true).open(path)?;
+    let mut writer = BufWriter::new(file);
+
+    self.write(&mut writer)
   }
 
   fn put_value<S: ToString>(&mut self, key: S, value: Value) {

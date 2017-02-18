@@ -9,7 +9,7 @@ use std::str::FromStr;
 #[derive(Debug)]
 pub enum Error {
   InvalidCommand(String),
-  TooFewArguments(usize, usize),
+  TooFewArguments(String, usize, usize),
   UnknownError(String),
 }
 
@@ -17,9 +17,15 @@ impl Display for Error {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
     match *self {
       Error::InvalidCommand(ref cmd) => write!(f, "invalid command: {}", cmd),
-      Error::TooFewArguments(ref expected, ref actual) => write!(f, "expected {} arguments, got {}", expected, actual),
+      Error::TooFewArguments(ref cmd, ref expected, ref actual) => write!(f, "command {} expects {} arguments, got {}", cmd, expected, actual),
       Error::UnknownError(ref msg) => write!(f, "unexpected error: {}", msg),
     }
+  }
+}
+
+impl Error {
+  pub fn unknown<S: ToString>(msg: S) -> Error {
+    Error::UnknownError(msg.to_string())
   }
 }
 
@@ -41,11 +47,11 @@ pub enum Command {
   Get(String),
 }
 
-fn assert_length<T>(v: &Vec<T>, l: usize) -> Result<&Vec<T>> {
+fn assert_length(v: &Vec<String>, l: usize) -> Result<&Vec<String>> {
   if v.len() >= l {
     Ok(v)
   } else {
-    Err(Error::TooFewArguments(l, v.len()))
+    Err(Error::TooFewArguments(v[0].clone(), l, v.len()))
   }
 }
 
@@ -61,7 +67,9 @@ impl FromStr for Command {
 
 impl Command {
   pub fn from_strings(strings: Vec<String>) -> Result<Self> {
-    assert_length(&strings, 1)?;
+    if strings.len() == 0 {
+      return Err(Error::unknown("No command given"));
+    }
 
     match strings[0].as_str() {
       "init" => Ok(Command::Init),
