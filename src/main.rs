@@ -3,7 +3,6 @@ extern crate kvs2;
 use std::str::FromStr;
 
 fn main() {
-
   let mut kvs = kvs2::KVStore::new();
 
   kvs.put("test", "test");
@@ -24,5 +23,4 @@ fn main() {
   let deser = kvs2::KVStore::from_str(&serialized).unwrap();
 
   println!("{:?}", deser.get(&"test2").unwrap());
-
 }

@@ -23,7 +23,6 @@ impl FromStr for KVStore {
   }
 }
 
-
 impl KVStore {
   pub fn new() -> KVStore {
     KVStore {
