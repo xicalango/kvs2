@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate serde_derive;
-
 extern crate serde_json;
+
+pub mod cmd;
 
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -108,6 +109,7 @@ pub enum Value {
 mod tests {
   use super::*;
 
+  #[test]
   fn test_create() {
     let kvs = KVStore::new();
   }
