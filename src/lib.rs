@@ -6,10 +6,38 @@ pub mod cmd;
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::io::{
+  Read,
+  Write,
+};
 
-type Error = String;
+use std::fmt::{
+  Display,
+  Formatter
+};
+
+#[derive(Debug)]
+pub enum KVError {
+  UnknownError(String)
+}
+
+impl Display for KVError {
+  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    match *self {
+      KVError::UnknownError(ref msg) => write!(f, "{}", msg)
+    }
+  }
+}
+
+type Error = KVError;
 
 type Result<V> = std::result::Result<V, Error>;
+
+impl From<serde_json::Error> for Error {
+  fn from(e: serde_json::Error) -> Self {
+    KVError::UnknownError(e.to_string())
+  }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KVStore {
@@ -20,7 +48,13 @@ impl FromStr for KVStore {
   type Err = Error;
 
   fn from_str(s: &str) -> Result<Self> {
-    serde_json::from_str(s).map_err(|e| e.to_string())
+    Ok(serde_json::from_str(s)?)
+  }
+}
+
+impl ToString for KVStore {
+  fn to_string(&self) -> String {
+    self.serialize().unwrap()
   }
 }
 
@@ -31,8 +65,16 @@ impl KVStore {
     }
   }
 
+  pub fn read<R: Read>(r: R) -> Result<KVStore> {
+    Ok(serde_json::from_reader(r)?)
+  }
+
   pub fn serialize(&self) -> Result<String> {
-    serde_json::to_string(self).map_err(|e| e.to_string())
+    Ok(serde_json::to_string(self)?)
+  }
+
+  pub fn write<W: Write>(&self, w: &mut W) -> Result<()> {
+    Ok(serde_json::to_writer(w, self)?)
   }
 
   fn put_value<S: ToString>(&mut self, key: S, value: Value) {
@@ -40,7 +82,7 @@ impl KVStore {
   }
 
   fn get_mut<S: ToString>(&mut self, key: S) -> Result<&mut Value> {
-    self.content.get_mut(&key.to_string()).ok_or("no key".to_string())
+    self.content.get_mut(&key.to_string()).ok_or(KVError::UnknownError("no key".to_string()))
   }
 
   fn get_mut_list<S: ToString>(&mut self, key: S) -> Result<&mut Vec<String>> {
@@ -50,7 +92,7 @@ impl KVStore {
     if let &mut Value::ListValue(ref mut list) = kv_value {
       Ok(list)
     } else {
-      Err(format!("value at {} not a list", &key))
+      Err(KVError::UnknownError(format!("value at {} not a list", &key)))
     }
   }
 
@@ -71,31 +113,20 @@ impl KVStore {
   }
 
   pub fn push_value<KS: ToString, VS: ToString>(&mut self, key: KS, value: VS) -> Result<()> {
-    let kv_value = self.get_mut(key)?;
-
-    if let &mut Value::ListValue(ref mut list) = kv_value {
-      Ok(list.push(value.to_string()))
-    } else {
-      Err("not a list".to_string())
-    }
+    let list = self.get_mut_list(key)?;
+    Ok(list.push(value.to_string()))
   }
 
   pub fn push_all_values<KS: ToString, VS: ToString>(&mut self, key: KS, values: Vec<VS>) -> Result<()> {
-    let kv_value = self.get_mut(key)?;
-
+    let list = self.get_mut_list(key)?;
     let mut string_values = values.iter().map(|x| x.to_string()).collect();
-
-    if let &mut Value::ListValue(ref mut list) = kv_value {
-      Ok(list.append(&mut string_values))
-    } else {
-      Err("not a list".to_string())
-    }
+    Ok(list.append(&mut string_values))
   }
 
   pub fn pop_value<KS: ToString>(&mut self, key: KS) -> Result<String> {
     let list_value = self.get_mut_list(key)?;
 
-    list_value.pop().ok_or("list is empty".to_string())
+    list_value.pop().ok_or(KVError::UnknownError("list is empty".to_string()))
   }
 }
 

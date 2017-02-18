@@ -1,6 +1,10 @@
+use std;
+
+use std::fmt::Display;
+use std::fmt::Formatter;
+
 use std::str::FromStr;
 
-use std;
 
 #[derive(Debug)]
 pub enum Error {
@@ -9,10 +13,20 @@ pub enum Error {
   UnknownError(String),
 }
 
+impl Display for Error {
+  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    match *self {
+      Error::InvalidCommand(ref cmd) => write!(f, "invalid command: {}", cmd),
+      Error::TooFewArguments(ref expected, ref actual) => write!(f, "expected {} arguments, got {}", expected, actual),
+      Error::UnknownError(ref msg) => write!(f, "unexpected error: {}", msg),
+    }
+  }
+}
+
 type Result<V> = std::result::Result<V, Error>;
 
 #[derive(Debug, PartialEq, Eq)]
-enum Command {
+pub enum Command {
   Init,
 
   PutString(String, String),
@@ -30,7 +44,7 @@ enum Command {
 fn assert_length<T>(v: &Vec<T>, l: usize) -> Result<&Vec<T>> {
   if v.len() >= l {
     Ok(v)
-  }  else {
+  } else {
     Err(Error::TooFewArguments(l, v.len()))
   }
 }
@@ -47,6 +61,7 @@ impl FromStr for Command {
 
 impl Command {
   pub fn from_strings(strings: Vec<String>) -> Result<Self> {
+    assert_length(&strings, 1)?;
 
     match strings[0].as_str() {
       "init" => Ok(Command::Init),
@@ -86,6 +101,18 @@ mod tests {
   }
 
   #[test]
+  fn test_empty() {
+    let err = Command::from_strings(Vec::new()).err().unwrap();
+
+    if let Error::TooFewArguments(expected, actual) = err {
+      assert_eq!(expected, 1);
+      assert_eq!(actual, 0);
+    } else {
+      assert!(false);
+    }
+  }
+
+  #[test]
   fn test_put_string_wrong_fmt() {
     let err = Command::from_str("put bla,gna").err().unwrap();
 
@@ -116,4 +143,9 @@ mod tests {
     assert_eq!(cmd, Command::PutString("bla".to_string(), "gna".to_string()));
   }
 
+  #[test]
+  #[should_panic]
+  fn test_fail() {
+    Command::from_str("invalid test").unwrap();
+  }
 }

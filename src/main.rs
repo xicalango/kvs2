@@ -1,10 +1,21 @@
 extern crate kvs2;
 
-use kvs2::cmd;
+use kvs2::cmd::Command;
 
 use std::str::FromStr;
 
+use std::env;
+
 fn main() {
+
+  let args = env::args();
+
+  let command = Command::from_strings(args.skip(1).collect()).unwrap();
+
+  if let Command::Init = command {
+
+  }
+
   let mut kvs = kvs2::KVStore::new();
 
   kvs.put("test", "test");
