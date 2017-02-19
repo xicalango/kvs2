@@ -4,6 +4,8 @@ extern crate serde_json;
 
 pub mod cmd;
 
+pub mod ui;
+
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::io::{
@@ -26,30 +28,32 @@ use std::fmt::{
 
 #[derive(Debug)]
 pub enum KVError {
-  UnknownError(String)
+  IoError(std::io::Error),
+  EncodingError(serde_json::Error),
+  UnknownError(String),
 }
 
 impl Display for KVError {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
     match *self {
-      KVError::UnknownError(ref msg) => write!(f, "{}", msg)
+      KVError::IoError(ref e) => write!(f, "{}", e.to_string()),
+      KVError::EncodingError(ref e) => write!(f, "{}", e.to_string()),
+      KVError::UnknownError(ref msg) => write!(f, "{}", msg),
     }
   }
 }
 
-type Error = KVError;
+type Result<V> = std::result::Result<V, KVError>;
 
-type Result<V> = std::result::Result<V, Error>;
-
-impl From<serde_json::Error> for Error {
+impl From<serde_json::Error> for KVError {
   fn from(e: serde_json::Error) -> Self {
-    KVError::UnknownError(e.to_string())
+    KVError::EncodingError(e)
   }
 }
 
-impl From<std::io::Error> for Error {
+impl From<std::io::Error> for KVError {
   fn from(e: std::io::Error) -> Self {
-    KVError::UnknownError(e.to_string())
+    KVError::IoError(e)
   }
 }
 
@@ -69,7 +73,7 @@ pub struct KVStore {
 }
 
 impl FromStr for KVStore {
-  type Err = Error;
+  type Err = KVError;
 
   fn from_str(s: &str) -> Result<Self> {
     Ok(serde_json::from_str(s)?)
@@ -166,6 +170,14 @@ impl KVStore {
 
     list_value.pop().ok_or(KVError::UnknownError("list is empty".to_string()))
   }
+
+  pub fn get_keys(&self) -> Vec<&String> {
+    self.content.keys().collect()
+  }
+
+  pub fn drop<KS: ToString>(&mut self, key: KS) -> Option<Value> {
+    self.content.remove(&key.to_string())
+  }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -180,6 +192,6 @@ mod tests {
 
   #[test]
   fn test_create() {
-    let kvs = KVStore::new();
+    KVStore::new();
   }
 }

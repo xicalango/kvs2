@@ -10,6 +10,7 @@ use std::str::FromStr;
 pub enum Error {
   InvalidCommand(String),
   TooFewArguments(String, usize, usize),
+  NoCommand,
   UnknownError(String),
 }
 
@@ -18,6 +19,7 @@ impl Display for Error {
     match *self {
       Error::InvalidCommand(ref cmd) => write!(f, "invalid command: {}", cmd),
       Error::TooFewArguments(ref cmd, ref expected, ref actual) => write!(f, "command {} expects {} arguments, got {}", cmd, expected, actual),
+      Error::NoCommand => write!(f, "no command given"),
       Error::UnknownError(ref msg) => write!(f, "unexpected error: {}", msg),
     }
   }
@@ -35,13 +37,14 @@ type Result<V> = std::result::Result<V, Error>;
 pub enum Command {
   Init,
 
+  ListKeys,
+
   PutString(String, String),
-  DropString(String),
+  Drop(String),
 
   CreateEmptyList(String),
   PushListValue(String, String),
   PopListValue(String),
-  DropList(String),
   ClearList(String),
 
   Get(String),
@@ -68,22 +71,23 @@ impl FromStr for Command {
 impl Command {
   pub fn from_strings(strings: Vec<String>) -> Result<Self> {
     if strings.len() == 0 {
-      return Err(Error::unknown("No command given"));
+      return Err(Error::NoCommand);
     }
 
     match strings[0].as_str() {
       "init" => Ok(Command::Init),
 
       "put" => assert_length(&strings, 3).map(|v| Command::PutString(v[1].clone(), v[2].clone())),
-      "drop" => assert_length(&strings, 2).map(|v| Command::DropString(v[1].clone())),
+      "drop" => assert_length(&strings, 2).map(|v| Command::Drop(v[1].clone())),
 
       "createEmptyList" => assert_length(&strings, 2).map(|v| Command::CreateEmptyList(v[1].clone())),
       "pushListValue" => assert_length(&strings, 3).map(|v| Command::PushListValue(v[1].clone(), v[2].clone())),
       "popListValue" => assert_length(&strings, 2).map(|v| Command::PopListValue(v[1].clone())),
-      "dropList" => assert_length(&strings, 2).map(|v| Command::DropList(v[1].clone())),
       "clearList" => assert_length(&strings, 2).map(|v| Command::ClearList(v[1].clone())),
 
       "get" => assert_length(&strings, 2).map(|v| Command::Get(v[1].clone())),
+
+      "listKeys" => Ok(Command::ListKeys),
 
       cmd => Err(Error::InvalidCommand(cmd.to_string()))
     }
@@ -112,9 +116,7 @@ mod tests {
   fn test_empty() {
     let err = Command::from_strings(Vec::new()).err().unwrap();
 
-    if let Error::TooFewArguments(expected, actual) = err {
-      assert_eq!(expected, 1);
-      assert_eq!(actual, 0);
+    if let Error::NoCommand = err {
     } else {
       assert!(false);
     }
@@ -124,7 +126,7 @@ mod tests {
   fn test_put_string_wrong_fmt() {
     let err = Command::from_str("put bla,gna").err().unwrap();
 
-    if let Error::TooFewArguments(expected, actual) = err {
+    if let Error::TooFewArguments(_, expected, actual) = err {
       assert_eq!(expected, 3);
       assert_eq!(actual, 2);
     } else {
