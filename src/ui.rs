@@ -13,7 +13,7 @@ use ::{
 use ::cmd::Command;
 
 pub enum UiError {
-  KvStoreNotExisting(String),
+  KvStoreNotExisting(String, String),
   NoValueForKey(String),
   AlreadyValuePresent(String),
   KvError(::KVError),
@@ -24,7 +24,7 @@ pub enum UiError {
 impl Display for UiError {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
     match *self {
-      UiError::KvStoreNotExisting(ref path) => write!(f, "kv store at {} not existing. Consider creating with the 'init' command", path),
+      UiError::KvStoreNotExisting(ref path, ref program) => write!(f, "kv store at {} not existing. Create with '{} init' command", path, program),
       UiError::NoValueForKey(ref key) => write!(f, "no value for key {}", key),
       UiError::AlreadyValuePresent(ref key) => write!(f, "there is already a value at {}", key),
       UiError::KvError(ref e) => e.fmt(f),
@@ -96,7 +96,7 @@ impl Ui {
   fn load_or_create_kvstore(&self, store_path: &Path, is_init: bool) -> Result<KVStore> {
     if !store_path.exists() {
       if !is_init {
-        return Err(UiError::KvStoreNotExisting(store_path.to_str().unwrap_or("<invalid path>").to_string()));
+        return Err(UiError::KvStoreNotExisting(store_path.to_str().unwrap_or("<invalid path>").to_string(), self.program.clone()));
       }
 
       return Ok(KVStore::new());
@@ -199,6 +199,6 @@ mod tests {
 
   #[test]
   fn test_construct() {
-    let ui = Ui::new("program".to_string(), "test".to_string(), false);
+    Ui::new("program".to_string(), "test".to_string(), false);
   }
 }
