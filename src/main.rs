@@ -25,8 +25,6 @@ fn main() {
 
   let ui = Ui::new(program, store_file, args.opt_present("n"));
 
-  println!("ui: {:?}", ui);
-
   match ui.run(args.free) {
     Ok(result) => println!("{}", result),
     Err(err) => println!("Error: {}", err),

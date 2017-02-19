@@ -5,12 +5,17 @@ use std::fmt::{
   Formatter,
 };
 
-use ::KVStore;
+use ::{
+  KVStore,
+  ValueType,
+};
+
 use ::cmd::Command;
 
 pub enum UiError {
   KvStoreNotExisting(String),
   NoValueForKey(String),
+  AlreadyValuePresent(String),
   KvError(::KVError),
   CmdError(::cmd::Error),
   UnknownError(String),
@@ -21,6 +26,7 @@ impl Display for UiError {
     match *self {
       UiError::KvStoreNotExisting(ref path) => write!(f, "kv store at {} not existing. Consider creating with the 'init' command", path),
       UiError::NoValueForKey(ref key) => write!(f, "no value for key {}", key),
+      UiError::AlreadyValuePresent(ref key) => write!(f, "there is already a value at {}", key),
       UiError::KvError(ref e) => e.fmt(f),
       UiError::CmdError(ref e) => e.fmt(f),
       UiError::UnknownError(ref msg) => write!(f, "unknown error: {}", msg),
@@ -116,15 +122,37 @@ impl Ui {
   fn interpret(&self, kvs: &mut KVStore, command: &Command) -> Result<UiResult> {
     match *command {
       Command::Init => Ok(UiResult::Ok),
-      Command::PutString(ref key, ref value) => UiResult::ok(kvs.put(key, value)),
+      Command::PutString(ref key, ref value) => self.put_string(key, value, kvs),
       Command::Get(ref key) => self.get(key, kvs),
       Command::ListKeys => self.list_keys(kvs),
-      Command::CreateEmptyList(ref key) => UiResult::ok(kvs.create_empty_list(key)),
+      Command::CreateEmptyList(ref key) => self.create_empty_list(key, kvs),
       Command::PushListValue(ref key, ref value) => UiResult::ok(kvs.push_value(key, value)?),
       Command::PopListValue(ref key) => Ok(UiResult::StringValueResult(kvs.pop_value(key)?)),
       Command::Drop(ref key) => self.drop(key, kvs),
+      Command::ClearList(ref key) => self.clear_list(key, kvs),
+    }
+  }
 
-      ref cmd => Err(UiError::UnknownError(format!("not implemented yet: {:?}", cmd)))
+  fn put_string(&self, key: &String, value: &String, kvs: &mut KVStore) -> Result<UiResult> {
+    match kvs.get_value_type(key) {
+      Some(ValueType::String) => UiResult::ok(kvs.put(key, value)),
+      _ => Err(UiError::AlreadyValuePresent(key.to_string()))
+    }
+  }
+
+  fn create_empty_list(&self, key: &String, kvs: &mut KVStore) -> Result<UiResult> {
+    if kvs.has_key(key) {
+      Err(UiError::AlreadyValuePresent(key.to_string()))
+    } else {
+      self.clear_list(key, kvs)?;
+      Ok(UiResult::Ok)
+    }
+  }
+
+  fn clear_list(&self, key: &String, kvs: &mut KVStore) -> Result<UiResult> {
+    match kvs.put_empty_list(key) {
+      Some(v) => Ok(self.to_result(&v)),
+      None => Ok(UiResult::Ok),
     }
   }
 

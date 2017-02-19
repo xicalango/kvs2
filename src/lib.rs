@@ -119,8 +119,8 @@ impl KVStore {
     self.write(&mut writer)
   }
 
-  fn put_value<S: ToString>(&mut self, key: S, value: Value) {
-    self.content.insert(key.to_string(), value);
+  fn put_value<S: ToString>(&mut self, key: S, value: Value) -> Option<Value> {
+    self.content.insert(key.to_string(), value)
   }
 
   fn get_mut<S: ToString>(&mut self, key: S) -> Result<&mut Value> {
@@ -147,11 +147,11 @@ impl KVStore {
     self.put_value(key, kv_value);
   }
 
-  pub fn create_empty_list<S: ToString>(&mut self, key: S) {
+  pub fn put_empty_list<S: ToString>(&mut self, key: S) -> Option<Value> {
     let empty_list = Vec::new();
     let value = Value::ListValue(empty_list);
 
-    self.put_value(key.to_string(), value);
+    self.put_value(key.to_string(), value)
   }
 
   pub fn push_value<KS: ToString, VS: ToString>(&mut self, key: KS, value: VS) -> Result<()> {
@@ -161,7 +161,7 @@ impl KVStore {
 
   pub fn push_all_values<KS: ToString, VS: ToString>(&mut self, key: KS, values: Vec<VS>) -> Result<()> {
     let list = self.get_mut_list(key)?;
-    let mut string_values = values.iter().map(|x| x.to_string()).collect();
+    let mut string_values = values.iter().map(ToString::to_string).collect();
     Ok(list.append(&mut string_values))
   }
 
@@ -178,12 +178,34 @@ impl KVStore {
   pub fn drop<KS: ToString>(&mut self, key: KS) -> Option<Value> {
     self.content.remove(&key.to_string())
   }
+
+  pub fn has_key<KS: ToString>(&self, key: KS) -> bool {
+    self.content.contains_key(&key.to_string())
+  }
+
+  pub fn get_value_type<KS: ToString>(&self, key: &KS) -> Option<ValueType> {
+    self.get(key).map(Value::get_type)
+  }
+}
+
+pub enum ValueType {
+  String,
+  List,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Value {
   StringValue(String),
   ListValue(Vec<String>)
+}
+
+impl Value {
+  pub fn get_type(&self) -> ValueType {
+    match *self {
+      Value::StringValue(_) => ValueType::String,
+      Value::ListValue(_) => ValueType::List,
+    }
+  }
 }
 
 #[cfg(test)]
