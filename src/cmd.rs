@@ -116,8 +116,7 @@ mod tests {
   fn test_empty() {
     let err = Command::from_strings(Vec::new()).err().unwrap();
 
-    if let Error::NoCommand = err {
-    } else {
+    if let Error::NoCommand = err {} else {
       assert!(false);
     }
   }
