@@ -14,6 +14,7 @@ use ::cmd::Command;
 
 pub enum UiError {
   KvStoreNotExisting(String, String),
+  InitWithExistingKvStore(String),
   NoValueForKey(String),
   AlreadyValuePresent(String),
   KvError(::KVError),
@@ -25,6 +26,7 @@ impl Display for UiError {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
     match *self {
       UiError::KvStoreNotExisting(ref path, ref program) => write!(f, "kv store at {} not existing. Create with '{} init' command", path, program),
+      UiError::InitWithExistingKvStore(ref path) => write!(f, "kv store at {} already initialized", path),
       UiError::NoValueForKey(ref key) => write!(f, "no value for key {}", key),
       UiError::AlreadyValuePresent(ref key) => write!(f, "there is already a value at {}", key),
       UiError::KvError(ref e) => e.fmt(f),
@@ -99,10 +101,14 @@ impl Ui {
         return Err(UiError::KvStoreNotExisting(store_path.to_str().unwrap_or("<invalid path>").to_string(), self.program.clone()));
       }
 
-      return Ok(KVStore::new());
+      return Ok(::init(store_path)?);
     }
 
-    return Ok(::KVStore::read_from_file(store_path)?);
+    if is_init {
+      Err(UiError::InitWithExistingKvStore(store_path.to_str().unwrap_or("<invalied path>").to_string()))
+    } else {
+      Ok(::KVStore::read_from_file(store_path)?)
+    }
   }
 
   pub fn run(&self, args: Vec<String>) -> Result<UiResult> {
@@ -159,7 +165,7 @@ impl Ui {
   fn drop(&self, key: &String, kvs: &mut KVStore) -> Result<UiResult> {
     match kvs.drop(key) {
       Some(v) => Ok(self.to_result(&v)),
-      None => Ok(UiResult::Ok),
+      None => Err(UiError::NoValueForKey(key.to_string())),
     }
   }
 
