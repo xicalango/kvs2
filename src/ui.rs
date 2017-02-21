@@ -142,7 +142,8 @@ impl Ui {
   fn put_string(&self, key: &String, value: &String, kvs: &mut KVStore) -> Result<UiResult> {
     match kvs.get_value_type(key) {
       Some(ValueType::String) => UiResult::ok(kvs.put(key, value)),
-      _ => Err(UiError::AlreadyValuePresent(key.to_string()))
+      Some(_) => Err(UiError::AlreadyValuePresent(key.to_string())),
+      None => UiResult::ok(kvs.put(key, value))
     }
   }
 
