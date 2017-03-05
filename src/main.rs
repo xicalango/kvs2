@@ -1,11 +1,23 @@
 extern crate kvs2;
 extern crate getopts;
 
-use kvs2::ui::Ui;
+use kvs2::ui::{
+  Ui,
+  UiResult,
+};
 
 use std::env;
 
+use std::fmt::Display;
+
+use std::process::exit;
+
 use getopts::Options;
+
+fn die<D: Display>(error: &D) {
+    println!("Error: {}", error);
+    exit(1);
+}
 
 fn main() {
   let args: Vec<String> = env::args().collect();
@@ -26,7 +38,9 @@ fn main() {
   let ui = Ui::new(program, store_file, args.opt_present("n"));
 
   match ui.run(args.free) {
+    Ok(UiResult::Ok) => (),
     Ok(result) => println!("{}", result),
-    Err(err) => println!("Error: {}", err),
+    Err(err) => die(&err),
   };
 }
+

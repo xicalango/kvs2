@@ -80,14 +80,14 @@ impl Command {
       "put" => assert_length(&strings, 3).map(|v| Command::PutString(v[1].clone(), v[2..].join(" "))),
       "drop" => assert_length(&strings, 2).map(|v| Command::Drop(v[1].clone())),
 
-      "createEmptyList" => assert_length(&strings, 2).map(|v| Command::CreateEmptyList(v[1].clone())),
-      "pushListValue" => assert_length(&strings, 3).map(|v| Command::PushListValue(v[1].clone(), v[2..].join(" "))),
-      "popListValue" => assert_length(&strings, 2).map(|v| Command::PopListValue(v[1].clone())),
-      "clearList" => assert_length(&strings, 2).map(|v| Command::ClearList(v[1].clone())),
+      "emptyList" => assert_length(&strings, 2).map(|v| Command::CreateEmptyList(v[1].clone())),
+      "push" => assert_length(&strings, 3).map(|v| Command::PushListValue(v[1].clone(), v[2..].join(" "))),
+      "pop" => assert_length(&strings, 2).map(|v| Command::PopListValue(v[1].clone())),
+      "clear" => assert_length(&strings, 2).map(|v| Command::ClearList(v[1].clone())),
 
       "get" => assert_length(&strings, 2).map(|v| Command::Get(v[1].clone())),
 
-      "listKeys" => Ok(Command::ListKeys),
+      "ls" => Ok(Command::ListKeys),
 
       cmd => Err(Error::InvalidCommand(cmd.to_string()))
     }
