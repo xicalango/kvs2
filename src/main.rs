@@ -6,11 +6,15 @@ use kvs2::ui::{
   UiResult,
 };
 
+use kvs2::hooks;
+
 use std::env;
 
 use std::fmt::Display;
 
 use std::process::exit;
+
+use std::path;
 
 use getopts::Options;
 
@@ -35,7 +39,12 @@ fn main() {
 
   let store_file = args.opt_str("s").unwrap_or(".kvs.json".to_string());
 
-  let ui = Ui::new(program, store_file, args.opt_present("n"));
+  let store_file_clone = store_file.clone();
+  let hooks_dir = path::Path::new(&store_file_clone).parent().unwrap_or(path::Path::new("./"));
+
+  let hooks = hooks::Hooks::load_from_dir(hooks_dir);
+
+  let ui = Ui::new(program, store_file, args.opt_present("n"), hooks);
 
   match ui.run(args.free) {
     Ok(UiResult::Ok) => (),

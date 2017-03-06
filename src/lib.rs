@@ -6,7 +6,7 @@ pub mod cmd;
 
 pub mod ui;
 
-mod hooks;
+pub mod hooks;
 
 use std::collections::HashMap;
 use std::str::FromStr;

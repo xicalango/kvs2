@@ -12,6 +12,8 @@ use ::{
 
 use ::cmd::Command;
 
+use ::hooks::Hooks;
+
 pub enum UiError {
   KvStoreNotExisting(String, String),
   InitWithExistingKvStore(String),
@@ -45,6 +47,12 @@ impl From<::cmd::Error> for UiError {
 impl From<::KVError> for UiError {
   fn from(e: ::KVError) -> Self {
     UiError::KvError(e)
+  }
+}
+
+impl From<String> for UiError {
+  fn from(e: String) -> Self {
+    UiError::UnknownError(e)
   }
 }
 
@@ -84,14 +92,16 @@ pub struct Ui {
   program: String,
   store_file: String,
   enumerate_list: bool,
+  hooks: Hooks,
 }
 
 impl Ui {
-  pub fn new(program: String, store_file: String, enumerate_list: bool) -> Ui {
+  pub fn new(program: String, store_file: String, enumerate_list: bool, hooks: Hooks) -> Ui {
     Ui {
       program: program,
       store_file: store_file,
       enumerate_list: enumerate_list,
+      hooks: hooks,
     }
   }
 
@@ -121,6 +131,8 @@ impl Ui {
     let result = self.interpret(&mut kvs, &command)?;
 
     kvs.write_to_file(store_path)?;
+
+    self.hooks.run_post_hooks(&result, &command)?;
 
     Ok(result)
   }

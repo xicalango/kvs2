@@ -92,6 +92,19 @@ impl Command {
       cmd => Err(Error::InvalidCommand(cmd.to_string()))
     }
   }
+
+  pub fn is_change(&self) -> bool {
+      match *self {
+          Command::Init |
+              Command::PutString(..) |
+              Command::Drop(..) |
+              Command::CreateEmptyList(..) |
+              Command::PushListValue(..) |
+              Command::PopListValue(..) |
+              Command::ClearList(..) => true,
+        _ => false,
+      }
+  }
 }
 
 #[cfg(test)]
