@@ -111,7 +111,7 @@ impl KVStore {
   }
 
   pub fn write<W: Write>(&self, w: &mut W) -> Result<()> {
-    Ok(serde_json::to_writer(w, self)?)
+    Ok(serde_json::to_writer_pretty(w, self)?)
   }
 
   pub fn write_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
